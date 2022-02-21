@@ -4,9 +4,10 @@ Created on Sun Feb 20 12:18:29 2022
 @author: killi
 Format raw data and save into formattedData.pickle
 """
-import re
-import os, sys 
-import time
+SCRAP = False
+
+import re, os, sys, time
+import numpy as np
 import pandas as pd
 from scrapper import getSession, getItemHistory, getItems
 
@@ -32,9 +33,15 @@ def splitName(string):
     # stattrak
     stattrak = "StatTrak™" in string
     string = string.replace("StatTrak™","")
+    
+    try:
+    #if "|" in string:
+        weapon, skin, wear = re.split(r"[(|)]\s*", string)[:3]
+    except:
+    #else:
+        #designed for special items (vanilla knifes, etc...)
+        weapon, skin, wear = string, "Vanilla", "None"
 
-    weapon, skin, wear = re.split(r"[(|)]\s*", string)[:3]
-   
     return weapon, skin, wear, star, stattrak
 
 def scrapItems(session):
@@ -69,7 +76,7 @@ def scrapItems(session):
 
     return data
 
-def scrapItemHistory(session):
+def scrapItemHistory(data, session):
     """
     scrap items history
     """
@@ -88,57 +95,55 @@ def scrapItemHistory(session):
 ##############################
 # scrap item names
 ##############################
+file0 = dataPath + "rawItemData.pickle"
 
 session = getSession()
 
-data = scrapItems(session)
+if SCRAP:
+    # 16 000 items, processed by 100, taking 160 * 10sec = 25 minutes
+    data = scrapItems(session)
 
-# save data
-data.to_pickle(dataPath + "rawItemData.pickle")
+    # save data
+    data.to_pickle(file0)
 
-# Load data
-#data = pd.read_pickle(dataPath + "rawData.pickle")
+else:
+    # Load data
+    data = pd.read_pickle(file0)
 
 ##############################
 # process item names
 ##############################
+file1 = dataPath + "skinData.pickle"
 
-# Drop useless columns
-dropCol = ["hash_name","app_icon", "app_name", "asset_description"]
-data.drop(columns=dropCol, inplace=True)
+# remove banned keywords (sticker, capsule, etc...)
+bannedKeyword = ["Sticker", "Capsule", "Graffiti", "Package", "Pin", "Patch", "Pass", "Key", "Holo", "Foil", "Music Kit", "Audience", "Challengers", "EMS Katowice", "Pallet"]
+mask0 = data.name.apply(lambda el : (np.sum([k in el for k in bannedKeyword]) == 0))
+data = data.loc[mask0].reset_index(drop=True)
 
-# filter out souvenir packages & navaja knife
-mask = ~data["name"].apply(lambda el : "Package" in el)
-mask &= ~(data["name"] == "★ Navaja Knife")
-data = data.loc[mask].reset_index(drop=True)
-
+# split names
 out = data["name"].apply(splitName)
 
 for i, col in enumerate(["weapon", "skin", "wear", "star", "stattrak"]):
     data[col] = out.map(lambda x: x[i])
-    
-# remove raw column
-#dropCol = ["name"]
-#data.drop(columns=dropCol, inplace=True)
 
 # rename listings and prices columns
 renameDict = {"sell_listings":"sellListing","sell_price":"buyListing","sell_price_text":"sellPrice($)","sale_price_text":"buyPrice($)"}
 data.rename(columns=renameDict, inplace=True)
 
 # cast prices to float
-data[["sellPrice($)","buyPrice($)"]] =data[["sellPrice($)","buyPrice($)"]].applymap(lambda el : float(el.replace("$","")))
+data[["sellPrice($)","buyPrice($)"]] =data[["sellPrice($)","buyPrice($)"]].applymap(lambda el : float(el.replace("$","").replace(",","")))
 
-# keep chosen price range
-mask = (data["buyPrice($)"] <= 500) & (data["buyPrice($)"] >= 120)
+# keep chosen price range, m
+mask = (data["buyPrice($)"] <= 420) & (data["buyPrice($)"] >= 200)
 data = data.loc[mask]
 
-data.to_pickle(dataPath + "skinData.pickle")
+data.to_pickle(file1)
 
 ##############################
 # scrap item history
 ##############################
 
-df = scrapItemHistory(session)
+df = scrapItemHistory(data, session)
 
 # save formatted dataset
 df.to_pickle(dataPath + "historyData.pickle")
