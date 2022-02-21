@@ -13,11 +13,14 @@ import steam.webauth as wa
 projectPath = "~/git_synchronized/steamMarketScrapper/"
 dataPath = projectPath + "data/"
 
+# retrieve credentials
+account, password = json.load(open(projectPath + "credentials.json")).values()
+
 # connect to steam
 def getSession():
     logging.debug("connecting to steam")
-    user = wa.WebAuth('7AXXnddb5N48')
-    session = user.cli_login('B7w38adb2JPBD68ab')
+    user = wa.WebAuth(account)
+    session = user.cli_login(password)
     return session
 
 #### URL scrapping functions
@@ -65,8 +68,8 @@ def getItems(currPos = 10, session=None):
         data : info about items (type = pd.DataFrame)
     """
     logging.debug("Get item data - pos " + str(pos))
-    
-    # mets en forme l'url
+
+    # format the url
     splitUrl = ["https://steamcommunity.com/market/search/render/?",
     "start="+str(currPos),
     "&",
@@ -86,6 +89,7 @@ def getItems(currPos = 10, session=None):
     for el in splitUrl:
         url += el
     
+    # execute the query
     out = session.get(url)
     jsonData = json.loads(out.text)
     data = pd.DataFrame(jsonData["results"])
