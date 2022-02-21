@@ -7,7 +7,7 @@ format raw data
 """
 SCRAP = False # speed up the process by skipping the item scrapping, for debug purpose
 
-import re, os, sys, time, logging
+import re, time, logging
 import numpy as np
 import pandas as pd
 from scrapper import getSession, getItemHistory, getItems
