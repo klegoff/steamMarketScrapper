@@ -7,7 +7,7 @@ format raw data
 """
 SCRAP = False # speed up the process by skipping the item scrapping, for debug purpose
 
-import re, os, sys, time
+import re, os, sys, time, logging
 import numpy as np
 import pandas as pd
 from scrapper import getSession, getItemHistory, getItems
@@ -59,7 +59,7 @@ def scrapItems(session):
         time.sleep(10)
 
         try :
-            print("currPos=",currPos)
+            logging.info("currPos="+str(currPos))
             data = getItems(currPos, session)
             # we stop when query results are empty
             if data.shape[0] == 0:
@@ -69,8 +69,8 @@ def scrapItems(session):
             currPos += 100
 
         except Exception as e:
-            print("currPos=",currPos)
-            print(e)
+            logging.info("currPos="+str(currPos))
+            logging.info(e)
             break
 
     data = pd.concat(dataList)
@@ -88,9 +88,9 @@ def scrapItemHistory(data, session):
         df : dataset of product historical values (type = pd.DataFrame)
     """
     df_list = []
-    print("Item number to process :", data.shape[0])
+    logging.info("Item number to process :" + str(data.shape[0]))
     for item in data["name"]:
-        print(item, len(df_list))
+        logging.info(item + " - " + str(len(df_list)))
         time.sleep(10)
         history = getItemHistory(item, session)
         history["name"] = item
@@ -151,8 +151,10 @@ data.to_pickle(file1)
 # scrap item history
 ##############################
 
+file2 = dataPath + "historyData.pickle"
+
 # 850 items, requested by interval of 10 seconds -> about 1.5 hour
 df = scrapItemHistory(data, session)
 
 # save formatted dataset
-df.to_pickle(dataPath + "historyData.pickle")
+df.to_pickle(file2)

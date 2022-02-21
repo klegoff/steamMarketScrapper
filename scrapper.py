@@ -4,8 +4,8 @@ Created on Sun Feb 20 15:58:32 2022
 @author: klegoff
 Scrapping function, using steam authentication adn some rest time to bypass the request limits
 """
+import json, logging
 import numpy as np
-import json
 import pandas as pd
 import steam.webauth as wa
 
@@ -15,6 +15,7 @@ dataPath = projectPath + "data/"
 
 # connect to steam
 def getSession():
+    logging.debug("connecting to steam")
     user = wa.WebAuth('7AXXnddb5N48')
     session = user.cli_login('B7w38adb2JPBD68ab')
     return session
@@ -34,6 +35,8 @@ def getItemHistory(item, session):
     :output:
         df : item history values (type = pd.DataFrame)
     """
+    logging.debug("Get item history : " + item)
+
     url = "https://steamcommunity.com/market/pricehistory/?appid=730&market_hash_name=" + item
 
     # get content & process
@@ -61,6 +64,8 @@ def getItems(currPos = 10, session=None):
     :output:
         data : info about items (type = pd.DataFrame)
     """
+    logging.debug("Get item data - pos " + str(pos))
+    
     # mets en forme l'url
     splitUrl = ["https://steamcommunity.com/market/search/render/?",
     "start="+str(currPos),
