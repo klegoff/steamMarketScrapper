@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Feb 20 15:58:32 2022
-
-@author: killi
+@author: klegoff
+Scrapping function, using steam authentication adn some rest time to bypass the request limits
 """
-import steam.webauth as wa
 import numpy as np
 import json
-import requests
 import pandas as pd
+import steam.webauth as wa
 
 # Path
-projectPath = "~/git_synchronized/steamMarketScrapper/"#"C:/Users/killi/Desktop/steamMarketScrapper/"
+projectPath = "~/git_synchronized/steamMarketScrapper/"
 dataPath = projectPath + "data/"
 
 # connect to steam
@@ -20,10 +19,21 @@ def getSession():
     session = user.cli_login('B7w38adb2JPBD68ab')
     return session
 
-#### URL 
-# item = np.random.choice(data["name"])
+#### URL scrapping functions
+
+# item = np.random.choice(data["name"]) #random example, for debugging
 
 def getItemHistory(item, session):
+    """
+    get the historic values for the specified item
+    do some basic formatting
+    :inputs:
+        item : item name in the market (type = str)
+            example : "StatTrak™ AWP | Oni Taiji (Field-Tested)"
+        session : steam session object
+    :output:
+        df : item history values (type = pd.DataFrame)
+    """
     url = "https://steamcommunity.com/market/pricehistory/?appid=730&market_hash_name=" + item
 
     # get content & process
@@ -42,11 +52,14 @@ def getItemHistory(item, session):
     df["sold"] = df["sold"].apply(int)
     return df
 
-### get items
-
 def getItems(currPos = 10, session=None):
     """
-    retourne le résultat de la requete, pour 100 items à partir de la position donnée (currPos)
+    return the result of the query, 100 items from the specified position
+    :inputs:
+        currPos : current position in the index (type = int)
+        session : steam session object    
+    :output:
+        data : info about items (type = pd.DataFrame)
     """
     # mets en forme l'url
     splitUrl = ["https://steamcommunity.com/market/search/render/?",
@@ -71,37 +84,4 @@ def getItems(currPos = 10, session=None):
     out = session.get(url)
     jsonData = json.loads(out.text)
     data = pd.DataFrame(jsonData["results"])
-    return data
-
-def OLDgetItems(currPos = 10, session=None):
-    """
-    retourne le résultat de la requete, pour 100 items à partir de la position donnée (currPos)
-    """
-    # mets en forme l'url
-    splitUrl = ["https://steamcommunity.com/market/search/render/?",
-    "start="+str(currPos),
-    "&",
-    "count=100"
-    "search_descriptions=0",
-    "&" ,
-    "sort_column=default",
-    "&",
-    "sort_dir=desc",
-    "&",
-    "appid=730",
-    "&",
-    "norender=1"]
-    
-    url = ""
-    
-    for el in splitUrl:
-        url += el
-    
-    # requete et mise en forme
-    r = requests.get(url)
-    out = r.text
-    
-    jsonData = json.loads(out)
-    data = pd.DataFrame(jsonData["results"])
-    
     return data

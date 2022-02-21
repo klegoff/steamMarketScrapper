@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sun Feb 20 12:18:29 2022
-@author: killi
-Format raw data and save into formattedData.pickle
+@author: klegoff
+Scrap data from items and their prices history,
+format raw data
 """
-SCRAP = False
+SCRAP = False # speed up the process by skipping the item scrapping, for debug purpose
 
 import re, os, sys, time
 import numpy as np
@@ -12,7 +13,7 @@ import pandas as pd
 from scrapper import getSession, getItemHistory, getItems
 
 # Path
-projectPath = "~/git_synchronized/steamMarketScrapper/"#"C:/Users/killi/Desktop/steamMarketScrapper/"
+projectPath = "~/git_synchronized/steamMarketScrapper/"
 dataPath = projectPath + "data/"
 
 ##############################
@@ -35,31 +36,32 @@ def splitName(string):
     string = string.replace("StatTrak™","")
     
     try:
-    #if "|" in string:
         weapon, skin, wear = re.split(r"[(|)]\s*", string)[:3]
     except:
-    #else:
-        #designed for special items (vanilla knifes, etc...)
+        #designed for special items (vanilla knifes)
         weapon, skin, wear = string, "Vanilla", "None"
 
     return weapon, skin, wear, star, stattrak
 
 def scrapItems(session):
     """
-    get all items
+    get all items, by request of 100 items
+    :input:    
+        session : steam session object
+    :output:
+        data : item dataset (type = pd.DataFrame)
     """
-    # récupère les données et concat
     dataList = []
     currPos = 0
 
     while True:
-        # délai entre les requetes pour éviter un ban ip
+        #delai between requests to avoid ip ban
         time.sleep(10)
 
         try :
             print("currPos=",currPos)
             data = getItems(currPos, session)
-            # requete vide => on arrete
+            # we stop when query results are empty
             if data.shape[0] == 0:
                 break
 
@@ -78,7 +80,12 @@ def scrapItems(session):
 
 def scrapItemHistory(data, session):
     """
-    scrap items history
+    scrap item historical prices, from the list of items
+    :inputs:
+        data : dataset of all products , of which we want to get historical values (type = pd.DataFrame)
+        session : steam session object
+    :output:
+        df : dataset of product historical values (type = pd.DataFrame)
     """
     df_list = []
     print("Item number to process :", data.shape[0])
@@ -113,12 +120,13 @@ else:
 ##############################
 # process item names
 ##############################
+
 file1 = dataPath + "skinData.pickle"
 
 # remove banned keywords (sticker, capsule, etc...)
 bannedKeyword = ["Sticker", "Capsule", "Graffiti", "Package", "Pin", "Patch", "Pass", "Key", "Holo", "Foil", "Music Kit", "Audience", "Challengers", "EMS Katowice", "Pallet"]
-mask0 = data.name.apply(lambda el : (np.sum([k in el for k in bannedKeyword]) == 0))
-data = data.loc[mask0].reset_index(drop=True)
+mask = data.name.apply(lambda el : (np.sum([k in el for k in bannedKeyword]) == 0))
+data = data.loc[mask].reset_index(drop=True)
 
 # split names
 out = data["name"].apply(splitName)
@@ -133,7 +141,7 @@ data.rename(columns=renameDict, inplace=True)
 # cast prices to float
 data[["sellPrice($)","buyPrice($)"]] =data[["sellPrice($)","buyPrice($)"]].applymap(lambda el : float(el.replace("$","").replace(",","")))
 
-# keep chosen price range, m
+# keep chosen price range, speed up the next query
 mask = (data["buyPrice($)"] <= 420) & (data["buyPrice($)"] >= 200)
 data = data.loc[mask]
 
@@ -143,10 +151,8 @@ data.to_pickle(file1)
 # scrap item history
 ##############################
 
+# 850 items, requested by interval of 10 seconds -> about 1.5 hour
 df = scrapItemHistory(data, session)
 
 # save formatted dataset
 df.to_pickle(dataPath + "historyData.pickle")
-data.to_pickle(dataPath + "skinData.pickle")
-
-
