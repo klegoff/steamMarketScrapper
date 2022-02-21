@@ -43,7 +43,37 @@ def getItemHistory(item, session):
     return df
 
 ### get items
+
 def getItems(currPos = 10, session=None):
+    """
+    retourne le résultat de la requete, pour 100 items à partir de la position donnée (currPos)
+    """
+    # mets en forme l'url
+    splitUrl = ["https://steamcommunity.com/market/search/render/?",
+    "start="+str(currPos),
+    "&",
+    "count=100"
+    "search_descriptions=0",
+    "&" ,
+    "sort_column=default",
+    "&",
+    "sort_dir=desc",
+    "&",
+    "appid=730",
+    "&",
+    "norender=1"]
+    
+    url = ""
+    
+    for el in splitUrl:
+        url += el
+    
+    out = session.get(url)
+    jsonData = json.loads(out.text)
+    data = pd.DataFrame(jsonData["results"])
+    return data
+
+def OLDgetItems(currPos = 10, session=None):
     """
     retourne le résultat de la requete, pour 100 items à partir de la position donnée (currPos)
     """

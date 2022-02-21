@@ -51,7 +51,7 @@ def scrapItems(session):
 
         try :
             print("currPos=",currPos)
-            data = getItems(currPos, None)
+            data = getItems(currPos, session)
             # requete vide => on arrete
             if data.shape[0] == 0:
                 break
@@ -89,7 +89,9 @@ def scrapItemHistory(session):
 # scrap item names
 ##############################
 
-data = scrapItems()
+session = getSession()
+
+data = scrapItems(session)
 
 # save data
 data.to_pickle(dataPath + "rawItemData.pickle")
@@ -135,8 +137,6 @@ data.to_pickle(dataPath + "skinData.pickle")
 ##############################
 # scrap item history
 ##############################
-
-session = getSession()
 
 df = scrapItemHistory(session)
 
