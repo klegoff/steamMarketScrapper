@@ -145,6 +145,9 @@ data[["sellPrice($)","buyPrice($)"]] =data[["sellPrice($)","buyPrice($)"]].apply
 mask = (data["buyPrice($)"] <= 420) & (data["buyPrice($)"] >= 200)
 data = data.loc[mask]
 
+# remove duplicates
+data = data.drop_duplicates(subset="name").reset_index()
+
 data.to_pickle(file1)
 
 ##############################
