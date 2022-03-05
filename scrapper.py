@@ -4,13 +4,13 @@ Created on Sun Feb 20 15:58:32 2022
 @author: klegoff
 Scrapping function, using steam authentication adn some rest time to bypass the request limits
 """
-import json, logging
+import os, json, logging
 import numpy as np
 import pandas as pd
 import steam.webauth as wa
 
 # Path
-projectPath = "~/git_synchronized/steamMarketScrapper/"
+projectPath = os.getcwd() + os.sep
 dataPath = projectPath + "data/"
 
 # retrieve credentials
@@ -67,7 +67,7 @@ def getItems(currPos = 10, session=None):
     :output:
         data : info about items (type = pd.DataFrame)
     """
-    logging.debug("Get item data - pos " + str(pos))
+    logging.debug("Get item data - pos " + str(currPos))
 
     # format the url
     splitUrl = ["https://steamcommunity.com/market/search/render/?",

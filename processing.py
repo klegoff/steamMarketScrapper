@@ -5,15 +5,15 @@ Created on Sun Feb 20 12:18:29 2022
 Scrap data from items and their prices history,
 format raw data
 """
-SCRAP = False # speed up the process by skipping the item scrapping, for debug purpose
+SCRAP = True # speed up the process by skipping the item scrapping, for debug purpose
 
-import re, time, logging
+import os, re, time, logging
 import numpy as np
 import pandas as pd
 from scrapper import getSession, getItemHistory, getItems
 
 # Path
-projectPath = "~/git_synchronized/steamMarketScrapper/"
+projectPath = os.getcwd() + os.sep 
 dataPath = projectPath + "data/"
 
 ##############################
