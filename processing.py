@@ -56,7 +56,7 @@ def scrapItems(session):
 
     while True:
         #delai between requests to avoid ip ban
-        time.sleep(10)
+        #time.sleep(10) #request errors are manage by retry_
 
         try :
             logging.warning("currPos="+str(currPos))
@@ -70,7 +70,7 @@ def scrapItems(session):
 
         except Exception as e:
             logging.warning("currPos="+str(currPos))
-            logging.warnin(e)
+            logging.warning(e)
             break
 
     data = pd.concat(dataList)
@@ -92,7 +92,7 @@ def scrapItemHistory(data, session):
     for item in data["name"]:
         try:
             logging.warning(item + " - " + str(len(df_list)))
-            #time.sleep(10)
+            #time.sleep(10) #request errors are managed with request_policy
             history = getItemHistory(item, session)
             history["name"] = item
             df_list.append(history)
@@ -105,12 +105,12 @@ def scrapItemHistory(data, session):
 ##############################
 # scrap item names
 ##############################
-file0 = dataPath + "rawItemData.pickle"
+file0 = dataPath + "rawSkinData.pickle"
 
 session = getSession()
 
 if SCRAP_ITEMS:
-    # 16 000 items, processed by 100, taking 160 * 10sec = 25 minutes
+    # 16 000 items, processed by 10
     data = scrapItems(session)
 
     # save data
@@ -144,7 +144,7 @@ data.rename(columns=renameDict, inplace=True)
 # cast prices to float
 data[["sellPrice($)","buyPrice($)"]] =data[["sellPrice($)","buyPrice($)"]].applymap(lambda el : float(el.replace("$","").replace(",","")))
 
-# keep chosen price range, speed up the next query
+# filter only some items (speeds up the next scrapper) 
 #mask = (data["buyPrice($)"] <= 420) & (data["buyPrice($)"] >= 200)
 #data = data.loc[mask]
 
@@ -157,9 +157,9 @@ data.to_pickle(file1)
 # scrap item history
 ##############################
 
-file2 = dataPath + "historyData.pickle"
+file2 = dataPath + "rawHistoryData.pickle"
 
-# 850 items, requested by interval of 10 seconds -> about 1.5 hour
+# request historic, item by item
 df = scrapItemHistory(data, session)
 
 # save formatted dataset
