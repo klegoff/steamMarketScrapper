@@ -7,6 +7,8 @@ Scrapping function, using steam authentication adn some rest time to bypass the 
 import os, json, logging
 import numpy as np
 import pandas as pd
+
+from requests.adapters import HTTPAdapter, Retry
 import steam.webauth as wa
 
 # Path
@@ -21,6 +23,9 @@ def getSession():
     logging.debug("connecting to steam")
     user = wa.WebAuth(account)
     session = user.cli_login(password)
+    # retry policy
+    retry_policy = Retry(total = 12, backoff_factor = 1, status_forcelist = ["400"])
+    session.mount("http://", HTTPAdapter(max_retries = retry_policy))
     return session
 
 #### URL scrapping functions

@@ -5,7 +5,7 @@ Created on Sun Feb 20 12:18:29 2022
 Scrap data from items and their prices history,
 format raw data
 """
-SCRAP = True # speed up the process by skipping the item scrapping, for debug purpose
+SCRAP_ITEMS = True # speed up the process by skipping the item scrapping, for debug purpose
 
 import os, re, time, logging
 import numpy as np
@@ -59,7 +59,7 @@ def scrapItems(session):
         time.sleep(10)
 
         try :
-            logging.info("currPos="+str(currPos))
+            logging.warning("currPos="+str(currPos))
             data = getItems(currPos, session)
             # we stop when query results are empty
             if data.shape[0] == 0:
@@ -69,8 +69,8 @@ def scrapItems(session):
             currPos += 100
 
         except Exception as e:
-            logging.info("currPos="+str(currPos))
-            logging.info(e)
+            logging.warning("currPos="+str(currPos))
+            logging.warnin(e)
             break
 
     data = pd.concat(dataList)
@@ -88,14 +88,17 @@ def scrapItemHistory(data, session):
         df : dataset of product historical values (type = pd.DataFrame)
     """
     df_list = []
-    logging.info("Item number to process :" + str(data.shape[0]))
+    logging.warning("Item number to process :" + str(data.shape[0]))
     for item in data["name"]:
-        logging.info(item + " - " + str(len(df_list)))
-        time.sleep(10)
-        history = getItemHistory(item, session)
-        history["name"] = item
-        df_list.append(history)
-
+        try:
+            logging.warning(item + " - " + str(len(df_list)))
+            #time.sleep(10)
+            history = getItemHistory(item, session)
+            history["name"] = item
+            df_list.append(history)
+        except Exception as e:
+            logging.warning(e)
+            
     df = pd.concat(df_list)
     return df
 
@@ -106,7 +109,7 @@ file0 = dataPath + "rawItemData.pickle"
 
 session = getSession()
 
-if SCRAP:
+if SCRAP_ITEMS:
     # 16 000 items, processed by 100, taking 160 * 10sec = 25 minutes
     data = scrapItems(session)
 
@@ -142,8 +145,8 @@ data.rename(columns=renameDict, inplace=True)
 data[["sellPrice($)","buyPrice($)"]] =data[["sellPrice($)","buyPrice($)"]].applymap(lambda el : float(el.replace("$","").replace(",","")))
 
 # keep chosen price range, speed up the next query
-mask = (data["buyPrice($)"] <= 420) & (data["buyPrice($)"] >= 200)
-data = data.loc[mask]
+#mask = (data["buyPrice($)"] <= 420) & (data["buyPrice($)"] >= 200)
+#data = data.loc[mask]
 
 # remove duplicates
 data = data.drop_duplicates(subset="name").reset_index()
