@@ -7,8 +7,8 @@ format raw data
 """
 # speed up the process by skipping part of the process, for debug purpose
 # use False only on parts that have alread been completed
-SCRAP_ITEMS = False # if False, skip item scrapping
-SCRAP_HISTORY = False # if False, skip historical values scrapping
+SCRAP_ITEMS = True # if False, skip item scrapping
+SCRAP_HISTORY = True # if False, skip historical values scrapping
 PROCESS_HISTORY = True # if False, skip the historical data formatting
 
 import os, re, time, logging
