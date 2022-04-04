@@ -13,5 +13,7 @@ The project returns **these files**: <br/>
   -"rawHistoryData.pickle" : raw historical values for the items in the skinData <br/>
   -"historyData.pickle" : formatted historical value, at daily frequency (when many values on a same day, we sum sold quantities and takes the weighted mean of the medians prices) <br/>
 <br/>
+
+Performance is an issue on group_by operation. It works well with 8Gbytes of ram
 <br/>
 Using python 3.8.10
