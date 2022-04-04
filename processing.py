@@ -5,7 +5,11 @@ Created on Sun Feb 20 12:18:29 2022
 Scrap data from items and their prices history,
 format raw data
 """
-SCRAP_ITEMS = True # speed up the process by skipping the item scrapping, for debug purpose
+# speed up the process by skipping part of the process, for debug purpose
+# use False only on parts that have alread been completed
+SCRAP_ITEMS = False # if False, skip item scrapping
+SCRAP_HISTORY = False # if False, skip historical values scrapping
+PROCESS_HISTORY = True # if False, skip the historical data formatting
 
 import os, re, time, logging
 import numpy as np
@@ -102,6 +106,92 @@ def scrapItemHistory(data, session):
     df = pd.concat(df_list)
     return df
 
+def processDates(historyData):
+    """
+    around dates to 00:00 of the current day
+    the goal is to get regularity in the data (by day)
+    input:
+        historyData (type = pd.Dataframe) containing "date" column (type = pd.Timestamp)
+    output:
+        columns of dates resulting of the processing
+    """
+    def aroundDate(t):
+        """
+        around date to the same day at 00:00
+        input : 
+            t (pd.Timestamp)
+        """
+        if t.hour == 0:
+            return t
+        else:
+            return t.ceil("D") - pd.Timedelta('1D')
+
+    # every unique dates
+    unique_dates = list(historyData["date"].drop_duplicates())
+
+    # link between date and around date
+    around_dict = dict(zip(unique_dates,list(map(aroundDate, unique_dates))))
+
+    # replace dates 
+    return historyData["date"].map(around_dict)
+
+##### manage index and grouping, resulting of previous date processing
+
+    
+def combineDuplicates(historyData):
+    """
+    find references (item, date) that are duplicated
+    and fusion them in one line per day
+    """
+    
+    def idxGroupBy(historyData):
+        """
+        return indexes of historyData (df) that correspond to group_by operation
+        """
+        grp_df = historyData.groupby(["name", "date"])
+
+        g = grp_df.groups # here groupby computes index, and is the most time consuming part
+        groups = np.array(list(g.keys()))
+        idxGroups = list(g.values())
+        idxGroups = [list(el) for el in idxGroups]
+
+        # number of val for each group
+        lenGroups = np.array([len(el) for el in idxGroups])
+
+        # get indexes of groupsby (idxGroups), where we have duplicates (lenGroups > 1)
+        mask = (lenGroups > 1)
+        dfIdxToProcess = list(map(idxGroups.__getitem__, np.where(mask)[0])) 
+        dfIdxToKeep =     list(map(idxGroups.__getitem__, np.where(~mask)[0])) 
+
+        return dfIdxToKeep, dfIdxToProcess
+
+    def computeSyntheticArray(groupHistoryArray):
+        """
+        concatenate a group of rows with data from the same day and same item
+        optimized with numpy
+        input:
+            groupHistoryArray (type = np.array) values for 1 day and 1 item (/!\ can have length > 1)
+        """
+        priceArray, quantityArray = groupHistoryArray[:,1], groupHistoryArray[:,2]
+        new_qty = quantityArray.sum()
+        new_price = (priceArray * quantityArray).sum() / new_qty
+        return np.array([groupHistoryArray[0,0], new_price,new_qty, groupHistoryArray[0,-1]])
+
+    dfIdxToKeep, dfIdxToProcess = idxGroupBy(historyData)
+
+    # convert to numpy arrays
+    historyDataArray = historyData.values
+
+    # synthetize references with many values per day & item
+    outArray = [computeSyntheticArray(historyDataArray[grp_idx]) for grp_idx in dfIdxToProcess]
+    formattedData = pd.DataFrame(outArray, columns=historyData.columns)
+
+    # get dataset with no duplicates
+    keepData = historyData.iloc[np.concatenate(dfIdxToKeep)]
+
+    # gather both 
+    return pd.concat([keepData, formattedData]).reset_index(drop=True)
+
 ##############################
 # scrap item names
 ##############################
@@ -159,8 +249,39 @@ data.to_pickle(file1)
 
 file2 = dataPath + "rawHistoryData.pickle"
 
-# request historic, item by item
-df = scrapItemHistory(data, session)
+if SCRAP_HISTORY:
+    # request historic, item by item
+    historyData = scrapItemHistory(data, session)
 
-# save formatted dataset
-df.to_pickle(file2)
+    # save formatted dataset
+    historyData.to_pickle(file2)
+
+
+else :
+    # we load the formatted dataset
+    historyData = pd.read_pickle(file2)
+
+##############################
+# format historical data
+##############################
+file4 = dataPath + "historyData.pickle"
+
+if PROCESS_HISTORY:
+    
+    logging.warning("Processing historical values")
+    
+    # formate historical data
+    historyData = historyData.drop(columns=["month", "day","year"])
+
+    # process dates : we convert to 00:00 time
+    historyData["date"] = processDates(historyData)
+
+    # combine (date, item) references with many values (> 1)
+    historyData.reset_index(drop=True, inplace=True)
+    formattedHistoryData = combineDuplicates(historyData) # approx 15 min on the whole dataset
+
+    # convert into timeseries format
+    ts_df = pd.pivot_table(formattedHistoryData, index="name", columns="date")
+
+    # save
+    ts_df.to_pickle(file4)
